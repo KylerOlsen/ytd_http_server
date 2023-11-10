@@ -27,8 +27,20 @@ try:
     import usocket as socket
 except:
     import socket
+try:
+    import utime as time
+except:
+    import time
 
 VERSION = 'uytd/0.0.0a'
+
+DATES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+MONTHS = ['',
+    'Jan', 'Feb', 'Mar',
+    'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep',
+    'Oct', 'Nov', 'Dec',
+]
 
 
 class HTTPERROR(Exception): pass
@@ -79,7 +91,7 @@ class HTTP_Request_Handler:
 
         if isinstance(self.status, str): status = self.status.split(' ')[0]
         else: status = self.status
-        print(f"INFO []: {self.method} {status} {self.addr}")
+        print(f"INFO [{self.get_time()}]: {self.method} {status} {self.addr}")
 
     def DO_HEAD(self):
         self.set_status("501 Not Implemented")
@@ -125,7 +137,7 @@ class HTTP_Request_Handler:
     def send_headers(self):
         self._conn.send(f'HTTP/1.1 {self._status}\r\n'.encode('utf-8'))
         self._conn.send(f'Server: {VERSION}\r\n'.encode('utf-8'))
-        # conn.send(f'Date: {''}\r\n')
+        self._conn.send(f'Date: {self.get_time()}\r\n'.encode('utf-8'))
         for key, value in self._response_headers.items():
             self._conn.send(f'{key}: {value}\r\n'.encode('utf-8'))
         self._conn.send(b'\r\n\r\n')
@@ -161,6 +173,13 @@ class HTTP_Request_Handler:
                 raise HTTPERROR("Request Header Too Large (> 1024 bytes).")
         return raw_headers.decode('utf-8')
 
+    @staticmethod
+    def get_time() -> str:
+        t = time.gmtime()
+        d = DATES[t[6]]
+        m = MONTHS[t[1]]
+        return f"{d}, {t[2]} {m} {t[0]} {t[3]}:{t[4]}:{t[5]} GMT"
+
 class HTTP_Server:
 
     _request_handler: type[HTTP_Request_Handler]
@@ -191,12 +210,18 @@ class HTTP_Server:
             except HTTPERROR: pass
             except Exception:
                 conn.send(b'HTTP/1 500 Internal Server Error\r\n\r\n')
-                print(f"Error []: Unknown 500 {addr[0]}")
+                print(
+                    f"Error [{self._request_handler.get_time()}]:",
+                    f"Unknown 500 {addr[0]}",
+                )
             else:
                 try: request_handler.DO()
                 except HTTPERROR: pass
                 except Exception:
                     request_handler.set_status("500 Internal Server Error")
                     request_handler.send_headers()
-                    print(f"Error []: {request_handler.method} 500 {addr[0]}")
+                    print(
+                        f"Error [{self._request_handler.get_time()}]:",
+                        f"{request_handler.method} 500 {addr[0]}",
+                    )
             finally: conn.close()
