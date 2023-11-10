@@ -23,7 +23,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import socket
+try:
+    import usocket as socket
+except:
+    import socket
 
 VERSION = 'uytd/0.0.0a'
 
@@ -67,12 +70,16 @@ class HTTP_Request_Handler:
     def protocol(self) -> str: return self._protocol
 
     def DO(self):
-        if self._method == "HEAD": self.DO_HEAD()
-        elif self._method == "GET": self.DO_GET()
-        elif self._method == "PUT": self.DO_PUT()
-        elif self._method == "POST": self.DO_POST()
-        elif self._method == "DELETE": self.DO_DELETE()
+        if self.method == "HEAD": self.DO_HEAD()
+        elif self.method == "GET": self.DO_GET()
+        elif self.method == "PUT": self.DO_PUT()
+        elif self.method == "POST": self.DO_POST()
+        elif self.method == "DELETE": self.DO_DELETE()
         else: self.DO_UNKNOWN()
+
+        if isinstance(self.status, str): status = self.status.split(' ')[0]
+        else: status = self.status
+        print(f"INFO []: {self.method} {status} {self.addr}")
 
     def DO_HEAD(self):
         self.set_status("501 Not Implemented")
@@ -123,6 +130,9 @@ class HTTP_Request_Handler:
             self._conn.send(f'{key}: {value}\r\n'.encode('utf-8'))
         self._conn.send(b'\r\n\r\n')
 
+    def send_body(self, data: bytes):
+        self._conn.send(data)
+
     def _parse_headers(self) -> tuple[str, str, str, dict[str, str]]:
         try:
             raw_headers = self._read_headers()
@@ -131,14 +141,13 @@ class HTTP_Request_Handler:
             headers = {
                 header.split(':')[0]:
                 header.split(':')[1].strip()
-                for header in headers[1:]
+                for header in headers[1:-2]
             }
             return method, path, protocol, headers
         except:
-            raise
-            # self.set_status("400 Bad Request")
-            # self.send_headers()
-            # raise HTTPERROR("Invalid Request Format")
+            self.set_status("400 Bad Request")
+            self.send_headers()
+            raise HTTPERROR("Invalid Request Format")
 
     def _read_headers(self) -> str:
         i = 0
@@ -177,14 +186,17 @@ class HTTP_Server:
 
         while True:
             conn, addr = self.sock.accept()
-            try: request_handler = self._request_handler(conn, addr)
+            print(f"Connection from {addr[0]}")
+            try: request_handler = self._request_handler(conn, addr[0])
             except HTTPERROR: pass
-            except:
+            except Exception:
                 conn.send(b'HTTP/1 500 Internal Server Error\r\n\r\n')
+                print(f"Error []: Unknown 500 {addr[0]}")
             else:
                 try: request_handler.DO()
                 except HTTPERROR: pass
-                except:
+                except Exception:
                     request_handler.set_status("500 Internal Server Error")
                     request_handler.send_headers()
+                    print(f"Error []: {request_handler.method} 500 {addr[0]}")
             finally: conn.close()
