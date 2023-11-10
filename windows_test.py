@@ -7,8 +7,10 @@ class Custom_Request_Handler(HTTP_Request_Handler):
 
     def DO_GET(self):
         try:
+            path = self.path
+            if path[-1] == '/': path += 'index.html'
             # This is a very insecure way to do this
-            with open(self.path[1:], 'rb') as file:
+            with open(path[1:], 'rb') as file:
                 self.set_status(200)
                 data = file.read()
                 self.set_header("Content-Length", str(len(data)))
