@@ -28,12 +28,15 @@ import socket
 VERSION = 'uytd/0.0.0a'
 
 
+class HTTPERROR(Exception): pass
+
+
 class HTTP_Request_Handler:
 
     _conn: socket.socket
     _addr: str
 
-    _status: int
+    _status: int | str
     _response_headers: dict[str, str]
     _method: str
     _path: str
@@ -43,8 +46,7 @@ class HTTP_Request_Handler:
     def __init__(self, conn: socket.socket, addr: str):
         self._conn = conn
         self._addr = addr
-
-        self._status = 200
+        self._status = "200 OK"
         self._response_headers = {}
         (
             self._method,
@@ -53,43 +55,90 @@ class HTTP_Request_Handler:
             self._headers,
         ) = self._parse_headers()
 
+    @property
+    def addr(self) -> str: return self._addr
+    @property
+    def status(self) -> int | str: return self._status
+    @property
+    def method(self) -> str: return self._method
+    @property
+    def path(self) -> str: return self._path
+    @property
+    def protocol(self) -> str: return self._protocol
+
     def DO(self):
-        pass
+        if self._method == "HEAD": self.DO_HEAD()
+        elif self._method == "GET": self.DO_GET()
+        elif self._method == "PUT": self.DO_PUT()
+        elif self._method == "POST": self.DO_POST()
+        elif self._method == "DELETE": self.DO_DELETE()
+        else: self.DO_UNKNOWN()
+
+    def DO_HEAD(self):
+        self.set_status("501 Not Implemented")
+        self.send_headers()
 
     def DO_GET(self):
-        pass
+        self.set_status("501 Not Implemented")
+        self.send_headers()
 
     def DO_PUT(self):
-        pass
+        self.set_status("501 Not Implemented")
+        self.send_headers()
 
     def DO_POST(self):
-        pass
+        self.set_status("501 Not Implemented")
+        self.send_headers()
 
     def DO_DELETE(self):
-        pass
+        self.set_status("501 Not Implemented")
+        self.send_headers()
+
+    def DO_UNKNOWN(self):
+        self.set_status("501 Not Implemented")
+        self.send_headers()
+
+    def has_header(self, key: str) -> bool:
+        return key in self._headers
+
+    def get_header(self, key: str) -> str:
+        return self._headers[key]
+
+    def set_status(self, status: int | str):
+        self._status = status
 
     def set_header(self, key: str, value: str):
         if key.lower() in ["server", "date"]:
-            raise ValueError(f"Header Key cannot be '{key}'")
+            raise ValueError(f"Header key '{key}' cannot be changed.")
         self._response_headers[key] = value
 
+    def get_set_header(self, key: str) -> str:
+        return self._response_headers[key]
+
     def send_headers(self):
-        self._conn.send(f'HTTP/1.0 {self._status}\r\n'.encode('utf-8'))
+        self._conn.send(f'HTTP/1.1 {self._status}\r\n'.encode('utf-8'))
         self._conn.send(f'Server: {VERSION}\r\n'.encode('utf-8'))
         # conn.send(f'Date: {''}\r\n')
         for key, value in self._response_headers.items():
-            self._conn.send(f'{key}: {value}'.encode('utf-8'))
+            self._conn.send(f'{key}: {value}\r\n'.encode('utf-8'))
+        self._conn.send(b'\r\n\r\n')
 
     def _parse_headers(self) -> tuple[str, str, str, dict[str, str]]:
-        raw_headers = self._read_headers()
-        headers = raw_headers.split('\r\n')
-        method, path, protocol = headers[0].split(' ')
-        headers = {
-            header.split(':')[0]:
-            header.split(':')[1].strip()
-            for header in headers[1:]
-        }
-        return method, path, protocol, headers
+        try:
+            raw_headers = self._read_headers()
+            headers = raw_headers.split('\r\n')
+            method, path, protocol = headers[0].split(' ')
+            headers = {
+                header.split(':')[0]:
+                header.split(':')[1].strip()
+                for header in headers[1:]
+            }
+            return method, path, protocol, headers
+        except:
+            raise
+            # self.set_status("400 Bad Request")
+            # self.send_headers()
+            # raise HTTPERROR("Invalid Request Format")
 
     def _read_headers(self) -> str:
         i = 0
@@ -98,7 +147,9 @@ class HTTP_Request_Handler:
             raw_headers += self._conn.recv(1)
             i += 1
             if i > 1024:
-                raise BufferError("Request Header Too Large (> 1024 bytes)")
+                self.set_status("431 Request Header Fields Too Large")
+                self.send_headers()
+                raise HTTPERROR("Request Header Too Large (> 1024 bytes).")
         return raw_headers.decode('utf-8')
 
 class HTTP_Server:
@@ -106,6 +157,7 @@ class HTTP_Server:
     _request_handler: type[HTTP_Request_Handler]
     _address: str
     _port: int
+    sock: socket.socket
 
     def __init__(
         self,
@@ -116,18 +168,23 @@ class HTTP_Server:
         self._request_handler = request_handler
         self._address = address
         self._port = port
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind((self._address, self._port))
 
     def serve_forever(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('', 80))
-        s.listen(5)
+        self.sock.listen(5)
         print("HTTP listening...")
 
         while True:
-            conn, addr = s.accept()
-            try:
-                request_handler = self._request_handler(conn, addr)
-                request_handler.DO()
+            conn, addr = self.sock.accept()
+            try: request_handler = self._request_handler(conn, addr)
+            except HTTPERROR: pass
             except:
-                pass
-            conn.close()
+                conn.send(b'HTTP/1 500 Internal Server Error\r\n\r\n')
+            else:
+                try: request_handler.DO()
+                except HTTPERROR: pass
+                except:
+                    request_handler.set_status("500 Internal Server Error")
+                    request_handler.send_headers()
+            finally: conn.close()
