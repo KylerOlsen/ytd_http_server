@@ -6,6 +6,8 @@ Loosely inspired by `http.server` from the Python standard library.
 
 ## Documentation
 
+*Also see `windows_test.py` and `pico_test.py`*
+
 First Import the `HTTP_Server` and `HTTP_Request_Handler` classes.
 
 ```python
@@ -41,8 +43,9 @@ return a `501 Not Implemented` error. If we want to handle one of these
 methods, we need to overwrite the associated function by subclassing
 `HTTP_Request_Handler`.
 
-Here is an example `HTTP_Request_Handler` subclass that serves all files on
-the filesystem.
+Here is an example `HTTP_Request_Handler` subclass that serves **all** files on
+the filesystem. *__WARNING:__ Be careful doing it this way as it exposes all
+files on the filesystem to anyone with access to the http server.*
 
 ```python
 class Custom_Request_Handler(HTTP_Request_Handler):
