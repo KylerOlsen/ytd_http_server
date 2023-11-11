@@ -80,6 +80,8 @@ Examples: `self.send_body(data)`,
 `self.send_body("Hello World".encode('utf-8'))`
 
 Finally create an `HTTP_Server` object, passing in your Response Handler class.
+Then calling `HTTP_Server.serve_forever` will start the server, it will begin
+accepting requests, blocking code execution.
 
 ```python
 def main():
