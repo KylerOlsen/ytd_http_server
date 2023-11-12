@@ -198,31 +198,35 @@ class HTTP_Server:
         self._address = address
         self._port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self._address, self._port))
 
     def serve_forever(self):
-        self.sock.listen(5)
-        print("HTTP listening...")
+        try:
+            self.sock.listen(5)
+            print("HTTP listening...")
 
-        while True:
-            conn, addr = self.sock.accept()
-            print(f"Connection from {addr[0]}")
-            try: request_handler = self._request_handler(conn, addr[0])
-            except HTTPERROR: pass
-            except Exception:
-                conn.send(b'HTTP/1 500 Internal Server Error\r\n\r\n')
-                print(
-                    f"Error [{self._request_handler.get_time()}]:",
-                    f"Unknown 500 {addr[0]}",
-                )
-            else:
-                try: request_handler.DO()
+            while True:
+                conn, addr = self.sock.accept()
+                print(f"Connection from {addr[0]}")
+                try: request_handler = self._request_handler(conn, addr[0])
                 except HTTPERROR: pass
                 except Exception:
-                    request_handler.set_status("500 Internal Server Error")
-                    request_handler.send_headers()
+                    conn.send(b'HTTP/1 500 Internal Server Error\r\n\r\n')
                     print(
                         f"Error [{self._request_handler.get_time()}]:",
-                        f"{request_handler.method} 500 {addr[0]}",
+                        f"Unknown 500 {addr[0]}",
                     )
-            finally: conn.close()
+                else:
+                    try: request_handler.DO()
+                    except HTTPERROR: pass
+                    except Exception:
+                        request_handler.set_status("500 Internal Server Error")
+                        request_handler.send_headers()
+                        print(
+                            f"Error [{self._request_handler.get_time()}]:",
+                            f"{request_handler.method} 500 {addr[0]}",
+                        )
+                finally: conn.close()
+        finally:
+            self.sock.close()
