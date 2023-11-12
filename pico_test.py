@@ -28,7 +28,7 @@ def connect():
     #Connect to WLAN
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect(my_secrets.ssid, my_secrets.password)
+    wlan.connect(my_secrets.SSID, my_secrets.PASSWORD)
     while wlan.isconnected() == False:
         print('Waiting for connection...')
         time.sleep(1)
@@ -37,7 +37,7 @@ def connect():
 
 def access_point():
     ap = network.WLAN(network.AP_IF)
-    ap.config(essid=my_secrets.ap_ssid, password=my_secrets.ap_password)
+    ap.config(essid=my_secrets.AP_SSID, password=my_secrets.AP_PASSWORD)
     ap.active(True)
 
     while ap.active() == False:
