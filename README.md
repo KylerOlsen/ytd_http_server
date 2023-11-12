@@ -83,6 +83,10 @@ may work but are not guaranteed).
 Examples: `self.send_body(data)`,
 `self.send_body("Hello World".encode('utf-8'))`
 
+`HTTP_Request_Handler.body` is the body of the request. Not all requests
+have a body, in which case `HTTP_Request_Handler.body` be an empty byte string.
+Example: `data = self.body`
+
 Finally create an `HTTP_Server` object, passing in your Response Handler class.
 Then calling `HTTP_Server.serve_forever` will start the server, it will begin
 accepting requests, blocking code execution.

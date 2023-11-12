@@ -58,6 +58,7 @@ class HTTP_Request_Handler:
     _path: str
     _protocol: str
     _headers: dict[str, str]
+    _body: bytes | None
 
     def __init__(self, conn: socket.socket, addr: str):
         self._conn = conn
@@ -81,6 +82,16 @@ class HTTP_Request_Handler:
     def path(self) -> str: return self._path
     @property
     def protocol(self) -> str: return self._protocol
+    @property
+    def body(self) -> bytes:
+        if self._body is not None:
+            return self._body
+        else:
+            if 'Content-Length' in self._headers:
+                self._body = self._conn.recv(int(self._headers['Content-Length']))
+            else:
+                self._body = b''
+            return self._body
 
     def DO(self):
         if self.method == "HEAD": self.DO_HEAD()
