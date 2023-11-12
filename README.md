@@ -1,5 +1,6 @@
 # YTD HTTP Server
 *Kyler Olsen*
+*[YTD HTTP Server](https://github.com/KylerOlsen/ytd_http_server)*
 
 A simple HTTP server intended to work in micropython on a Raspberry Pi Pico W.
 Loosely inspired by `http.server` from the Python standard library.
