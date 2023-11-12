@@ -71,6 +71,7 @@ class HTTP_Request_Handler:
             self._protocol,
             self._headers,
         ) = self._parse_headers()
+        self._body = None
 
     @property
     def addr(self) -> str: return self._addr
