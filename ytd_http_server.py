@@ -33,7 +33,7 @@ try:
 except:
     import time
 
-VERSION = 'uytd/0.0.0a'
+VERSION = 'uytd/0.0.1a'
 
 DATES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 MONTHS = ['',
@@ -104,7 +104,7 @@ class HTTP_Request_Handler:
 
         if isinstance(self.status, str): status = self.status.split(' ')[0]
         else: status = self.status
-        print(f"INFO [{self.get_time()}]: {self.method} {status} {self.addr}")
+        print(f"INFO [{self.get_time()}]: {self.method} {self.path} {status} {self.addr}")
 
     def DO_HEAD(self):
         self.set_status("501 Not Implemented")
@@ -153,7 +153,7 @@ class HTTP_Request_Handler:
         self._conn.send(f'Date: {self.get_time()}\r\n'.encode('utf-8'))
         for key, value in self._response_headers.items():
             self._conn.send(f'{key}: {value}\r\n'.encode('utf-8'))
-        self._conn.send(b'\r\n\r\n')
+        self._conn.send(b'\r\n')
 
     def send_body(self, data: bytes):
         self._conn.send(data)
