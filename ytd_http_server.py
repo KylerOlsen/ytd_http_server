@@ -232,13 +232,13 @@ class HTTP_Server:
                 else:
                     try: request_handler.DO()
                     except HTTPERROR: pass
-                    except Exception:
-                        request_handler.set_status("500 Internal Server Error")
-                        request_handler.send_headers()
-                        print(
-                            f"Error [{self._request_handler.get_time()}]:",
-                            f"{request_handler.method} 500 {addr[0]}",
-                        )
+                    # except Exception:
+                    #     request_handler.set_status("500 Internal Server Error")
+                    #     request_handler.send_headers()
+                    #     print(
+                    #         f"Error [{self._request_handler.get_time()}]:",
+                    #         f"{request_handler.method} 500 {addr[0]}",
+                    #     )
                 finally: conn.close()
         finally:
             self.sock.close()
